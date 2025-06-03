@@ -1,0 +1,820 @@
+JMP main
+JMP isr
+
+words:
+    DB "planet\x00"
+    DB "whisper\x00"
+    DB "candle\x00"
+    DB "mirror\x00"
+    DB "jungle\x00"
+    DB "rocket\x00"
+    DB "guitar\x00"
+    DB "castle\x00"
+    DB "pirate\x00"
+    DB "desert\x00"
+    DB "butter\x00"
+    DB "ocean\x00"
+    DB "window\x00"
+    DB "ladder\x00"
+    DB "saddle\x00"
+    DB "silver\x00"
+    DB "marble\x00"
+    DB "pencil\x00"
+    DB "helmet\x00"
+    DB "dragon\x00"
+    DB "kitten\x00"
+    DB "garden\x00"
+    DB "vacuum\x00"
+    DB "breeze\x00"
+    DB "magnet\x00"
+    DB "lantern\x00"
+    DB "camera\x00"
+    DB "ticket\x00"
+    DB "zombie\x00"
+    DB "island\x00"
+    DB "animal\x00"
+    DB "hammer\x00"
+    DB "circle\x00"
+    DB "banana\x00"
+    DB "cactus\x00"
+    DB "violin\x00"
+    DB "carpet\x00"
+    DB "pepper\x00"
+    DB "hunter\x00"
+    DB "splash\x00"
+    DB "plasma\x00"
+    DB "wizard\x00"
+    DB "anchor\x00"
+    DB "engine\x00"
+    DB "bubble\x00"
+    DB "pillow\x00"
+    DB "velvet\x00"
+    DB "freeze\x00"
+    DB "planet\x00"
+    DB "jacket\x00"
+    DB "falcon\x00"
+    DB "branch\x00"
+    DB "cookie\x00"
+    DB "shadow\x00"
+    DB "bottle\x00"
+    DB "bridge\x00"
+    DB "ticket\x00"
+    DB "ribbon\x00"
+    DB "canyon\x00"
+    DB "cradle\x00"
+    DB "pickle\x00"
+    DB "scooter\x00"
+    DB "thread\x00"
+	DB "glider\x00"
+
+;
+; Global variables
+;
+selected_word_ptr:		; holds the address of the selected word
+	DW 0x0000  			
+selected_word_length:	; holds the length of the word
+	DB 0  				
+str_loading:			; A string that is displayed 
+    DB "Loading...\x00" ; while the game is loading.
+str_win:
+	DB "You win!\x00"
+str_lost:
+	DB "You lost...\x00"
+max_attemps:
+	DB 8
+current_attemps:
+	DB 0
+guessed_word:  			; max length of word is 8
+	DB 0
+    DB 0
+    DB 0
+    DB 0
+    DB 0
+    DB 0
+    DB 0
+    DB 0
+pressed_key:			; Indicates a keypress event.
+    DB 0
+is_letter_revealed:
+	DB 0
+is_running:
+	DB 0
+gibbet_color:
+	DB 0x00
+
+tile_definitions:
+; Bottom Left (0xF0) - 1
+  	DB "\x03\xC0\x03\xC0\x03\xC0\x03\xC0\x03\xC0\x03\xC0\x03\xC0\x03\xC0"
+  	DB "\x03\xC0\x03\xC0\x03\xC0\x03\xC0\x1F\xF8\x1F\xF8\x1F\xF8\x00\x00"
+; Middle Left (0xF1) - 1
+	DB "\x03\xF0\x03\xE0\x03\xC0\x03\xC0\x03\xC0\x03\xC0\x03\xC0\x03\xC0"
+	DB "\x03\xC0\x03\xC0\x03\xC0\x03\xC0\x03\xC0\x03\xC0\x03\xC0\x03\xC0"
+; Top Left (0xF2) - 1
+	DB "\x00\x00\x00\x00\x03\xC0\x03\xC0\x0F\xFF\x0F\xFF\x0F\xFF\x0F\xFF"
+	DB "\x03\xC0\x03\xC0\x03\xC1\x03\xC3\x03\xC7\x03\xCE\x03\xDC\x03\xF8"
+; Top Center (gibbet part) (0xF3) - 1
+	DB "\x00\x00\x00\x00\x00\x00\x00\x00\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
+	DB "\x70\x00\xE0\x00\xC0\x00\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+; Top Right (0xF4) - 1
+	DB "\x00\x00\x00\x00\x00\x00\x00\x00\xF8\x00\xF8\x00\xF8\x00\xF8\x00"
+	DB "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+; Rope (Top Center) (0xF5)
+	DB "\x00\x00\x00\x00\x00\x00\x00\x00\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF"
+	DB "\x70\xC0\xE0\xC0\xC0\xC0\x80\xC0\x00\xC0\x00\xC0\x00\xC0\x00\xC0"
+; Head (Center) (0xF6)
+	DB "\x00\xC0\x03\xF0\x06\x18\x0C\x0C\x08\x04\x08\x04\x08\x04\x08\x04"
+	DB "\x0C\x0C\x06\x18\x03\xF0\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+; Head with body (Center) (0xF7)
+	DB "\x00\xC0\x03\xF0\x06\x18\x0C\x0C\x08\x04\x08\x04\x08\x04\x08\x04"
+	DB "\x0C\x0C\x06\x18\x03\xF0\x00\xC0\x00\xC0\x00\xC0\x00\xC0\x00\xC0"
+; Body (Bottom Center) (0xF8)
+	DB "\x00\xC0\x00\xC0\x00\xC0\x00\xC0\x00\xC0\x00\x00\x00\x00\x00\x00"
+	DB "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+; Body + Left Leg (Bottom Center) (0xF9)
+	DB "\x00\xC0\x00\xC0\x00\xC0\x00\xC0\x01\xC0\x03\x00\x06\x00\x0C\x00"
+	DB "\x0C\x00\x18\x00\x10\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+; Body + Left Leg + Right Leg (Bottom Center) (0xFA)
+	DB "\x00\xC0\x00\xC0\x00\xC0\x00\xC0\x01\xE0\x03\x30\x06\x10\x0C\x18"
+	DB "\x0C\x08\x18\x0C\x10\x06\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
+; Body + Left Hand (Center) (0xFB)
+	DB "\x00\xC0\x03\xF0\x06\x18\x0C\x0C\x08\x04\x08\x04\x08\x04\x08\x04"
+	DB "\x0C\x0C\x06\x18\x63\xF0\x30\xC0\x18\xC0\x0E\xC0\x03\xC0\x01\xC0"
+; Body + Left Hand + Right Hand (Center) (0xFC)
+	DB "\x00\xC0\x03\xF0\x06\x18\x0C\x0C\x08\x04\x08\x04\x08\x04\x08\x04"
+	DB "\x0C\x0C\x06\x18\x63\xF1\x30\xC3\x18\xC6\x0E\xDC\x03\xF0\x01\xE0"
+
+
+; -----------------------------------------------------------------------------
+; Function: load_vram_tiles()
+; -----------------------------------------------------------------------------
+; Loads all our custom graphic tiles to VRAM.
+; Definitions of text characters start at address 0x8000 in VRAM. We choose to
+; redefine ASCII characters 0xF0 - 0xFC, which start at VRAM address 0x9E00.
+; -----------------------------------------------------------------------------
+load_vram_tiles:
+    MOV C, tile_definitions
+    MOV D, 0x9E00 ; Our custom tiles start at the VRAM address 0x9E00.
+load_vram_tiles_loop:
+    CMP D, 0x9FA0 ; Our custom tiles end at the VRAM address 0x9F9F.
+    JE load_vram_tiles_return
+    MOV A, D      ; Set the VRAM address
+    OUT 8         ; through the VIDADDR I/O register.
+    MOV A, [C]    ; Load a 16-bit word of the data.
+    OUT 9         ; Store it to VRAM.
+    ADD C, 2      ; Next 16-bit data.
+    ADD D, 2      ; Next VRAM address.
+    JMP load_vram_tiles_loop
+load_vram_tiles_return:
+    RET
+
+
+; -----------------------------------------------------------------------------
+; Interrupt Service Routine
+; -----------------------------------------------------------------------------
+isr:
+	PUSH A
+    IN 1
+    CMP A, 1
+	JE isr_keyboard
+    JMP isr_return
+isr_keyboard:
+    IN 6              ; Read the pressed key code to clear the status.
+    MOVB [pressed_key], AL
+    MOV A, 1          ; Keyboard interrupt number.
+    OUT 2             ; The keyboard interrupt has been serviced.
+    MOVB BL, [is_running]
+    CMPB BL, 0
+    JNE isr_return
+    MOVB BL, [pressed_key]
+    CMPB BL, 0x20
+    JNE isr_return
+    MOV A, 3
+    OUT 7
+	CALL init_game
+isr_return:
+	POP A
+	IRET
+
+; -----------------------------------------------------------------------------
+; Function: draw_text(*str, color, *vram)
+; -----------------------------------------------------------------------------
+; Draws the given text to the given VRAM address.
+; *str  -> register C: The pointer to a string in RAM.
+; color -> register B: The color of the text (0 - 255).
+; *vram -> register D: The address in VRAM to place the text to.
+; -----------------------------------------------------------------------------
+draw_text:
+    MOVB BH, [C]        ; Get a character.
+    CMPB BH, 0          ; If the character is 0, we are done.
+    JE draw_text_return
+    MOV A, D            ; Set the VRAM address for the character
+    OUT 8               ; through the VIDADDR I/O register.
+    MOV A, B            ; Set the character and its color
+    OUT 9               ; through the VIDDATA I/O register.
+    INC C               ; Point to the next character.
+    ADD D, 2            ; Set the next VRAM address.
+    JMP draw_text
+draw_text_return:
+    RET
+
+; -----------------------------------------------------------------------------
+; Function: draw_loading_screen()
+; -----------------------------------------------------------------------------
+; Constructs the screen that displays the "Loading..." message. The screen
+; is contained just below the 128x16 tiles map area, far left.
+; -----------------------------------------------------------------------------
+draw_loading_screen:
+    MOV C, str_loading ; Point to the "Loading..." string.
+    MOV B, 0x00        ; Set the color of the text.
+    MOV D, 0x1706      ; The VRAM position of the text.
+    CALL draw_text
+    RET
+
+
+; -----------------------------------------------------------------------------
+; Function: show_loading_screen()
+; -----------------------------------------------------------------------------
+; Sets the video view to the "loading..." screen. It also sets the background
+; color to black.
+; -----------------------------------------------------------------------------
+show_loading_screen:
+    MOV A, 0xA304      ; Access the VRAM VScroll value
+    OUT 8              ; through the VIDADDR I/O register.
+    MOV A, 256         ; Scroll vertically 16 tiles
+    OUT 9              ; by setting the VScroll value to 256.
+    MOV A, 0xA300      ; Access the VRAM Background value
+    OUT 8              ; through the VIDADDR I/O register.
+    MOV A, 0xFFFF      ; Set it to black
+    OUT 9              ; by setting the Background value to 0.
+    RET
+
+; -----------------------------------------------------------------------------
+; Function: draw_word_screen()
+; -----------------------------------------------------------------------------
+; Draws the current guessed word on the screen.
+; Uses the global variable `guessed_word`, with a maximum length of 8 characters.
+; Text color is black (0x00), and the VRAM location is 0x2E0A.
+; -----------------------------------------------------------------------------
+draw_word_screen:
+	MOV C, guessed_word		
+    MOV B, 0x00 			; Color of the text
+    MOV D, 0x2E0A			; Position
+    CALL draw_text
+    RET
+
+
+; -----------------------------------------------------------------------------
+; Function: draw_mystery_word_screen()
+; -----------------------------------------------------------------------------
+; Draws the actual mystery word (the answer).
+; Uses the global pointer `selected_word_ptr` to reference the word in memory.
+; Text color is black (0x00), and the VRAM location is 0x2D0A.
+; -----------------------------------------------------------------------------
+draw_mystery_word_screen:
+	MOV C, [selected_word_ptr]
+    MOV B, 0x00
+    MOV D, 0x2D0A
+    CALL draw_text
+    RET
+
+draw_you_win_screen:
+	MOV C, str_win
+    MOV B, 56
+    MOV D, 0x2308
+    CALL draw_text
+    RET
+
+draw_you_lost_screen:
+	MOV C, str_lost
+    MOV B, 192
+    MOV D, 0x2306
+    CALL draw_text
+    RET
+
+show_word_screen:
+	MOV A, 0xA304			; Access the VRAM VScroll value
+    OUT 8
+    MOV A, 512
+    OUT 9
+    MOV A, 0xA300
+    OUT 8
+    MOV A, 0xFFFF
+    OUT 9
+    RET
+
+
+draw_gibbet_part:
+    MOVB AL, [current_attemps]
+
+    CMPB AL, 7
+    JNE check_attemps_6
+
+    MOV A, 0x290C
+    OUT 8
+    MOVB AH, 0xF0
+    MOVB AL, [gibbet_color]
+    OUT 9
+    MOV A, 0x280C
+    OUT 8
+    MOVB AH, 0xF1
+    MOVB AL, [gibbet_color]
+    OUT 9
+    MOV A, 0x270C
+    OUT 8
+    MOVB AH, 0xF2
+    MOVB AL, [gibbet_color]
+    OUT 9
+    MOV A, 0x270E
+    OUT 8
+    MOVB AH, 0xF3
+    MOVB AL, [gibbet_color]
+    OUT 9
+    MOV A, 0x2710
+    OUT 8
+    MOVB AH, 0xF4
+    MOVB AL, [gibbet_color]
+    OUT 9
+    JMP draw_gibbet_part_return
+
+check_attemps_6:
+    CMPB AL, 6
+    JNE check_attemps_5
+
+    MOV A, 0x270E
+    OUT 8
+    MOVB AH, 0xF5
+    MOVB AL, [gibbet_color]
+    OUT 9
+    JMP draw_gibbet_part_return
+
+check_attemps_5:
+    CMPB AL, 5
+    JNE check_attemps_4
+
+    MOV A, 0x280E
+    OUT 8
+    MOVB AH, 0xF6
+    MOVB AL, [gibbet_color]
+    OUT 9
+    JMP draw_gibbet_part_return
+
+check_attemps_4:
+    CMPB AL, 4
+    JNE check_attemps_3
+
+    MOV A, 0x280E
+    OUT 8
+    MOVB AH, 0xF7
+    MOVB AL, [gibbet_color]
+    OUT 9
+
+    MOV A, 0x290E
+    OUT 8
+    MOVB AH, 0xF8
+    MOVB AL, [gibbet_color]
+    OUT 9
+    JMP draw_gibbet_part_return
+
+check_attemps_3:
+    CMPB AL, 3
+    JNE check_attemps_2
+
+    MOV A, 0x290E
+    OUT 8
+    MOVB AH, 0xF9
+    MOVB AL, [gibbet_color]
+    OUT 9
+    JMP draw_gibbet_part_return
+
+check_attemps_2:
+    CMPB AL, 2
+    JNE check_attemps_1
+
+    MOV A, 0x290E
+    OUT 8
+    MOVB AH, 0xFA
+    MOVB AL, [gibbet_color]
+    OUT 9
+    JMP draw_gibbet_part_return
+
+check_attemps_1:
+    CMPB AL, 1
+    JNE check_attemps_0
+
+    MOV A, 0x280E
+    OUT 8
+    MOVB AH, 0xFB
+    MOVB AL, [gibbet_color]
+    OUT 9
+    JMP draw_gibbet_part_return
+
+check_attemps_0:
+    CMPB AL, 0
+    JNE draw_gibbet_part_return
+
+    MOV A, 0x280E
+    OUT 8
+    MOVB AH, 0xFC
+    MOVB AL, [gibbet_color]
+    OUT 9
+
+draw_gibbet_part_return:
+    RET
+
+
+
+; -----------------------------------------------------------------------------
+; Function: process_user_input()
+; -----------------------------------------------------------------------------
+; Checks for keypress and reacts accoring to the bird's state:
+;     WAITING = 0  Changes the state to FLYING and sets the HScroll speed to 1.
+;     FLYING = 1   Changes the bird's vertical motion towards the sky and sets
+;                  the timer.
+;     DYING = 2    Ignores any keypress. The bird must fall down.
+;     DEAD = 3     Changes the state to WAITING and resets the game.
+; -----------------------------------------------------------------------------
+process_user_input:
+    MOVB AL, [pressed_key]             ; Check if a key was pressed.
+    CMPB AL, 0                         ; If not, do nothing an return.
+    JE process_user_input_return
+    CALL make_move
+    
+    MOVB [is_letter_revealed], 0x00
+	MOVB [pressed_key], 0
+process_user_input_return:
+    RET
+
+
+; -----------------------------------------------------------------------------
+; Function: select_random_word()
+; -----------------------------------------------------------------------------
+; Selects a random word from a list of null-separated strings pointed by `words`.
+; Reads a random index from IN 10 and skips that many words in the list.
+; Stores a pointer to the selected word in `selected_word_ptr`.
+; -----------------------------------------------------------------------------
+select_random_word:
+	IN 10
+    AND A, 63 ; random_index (contains number of words to skip)
+    MOV B, words      ; pointer iterator
+select_random_word_while:
+	CMP A, 0  					   ; while A != 0
+    JE select_random_word_return   ; do:
+    MOVB DL, [B]
+    CMPB DL, 0
+    JNE select_random_word_skip
+    DEC A
+select_random_word_skip:
+	INC B
+    JMP select_random_word_while
+select_random_word_return:
+	MOV [selected_word_ptr], B
+	RET
+
+
+; -----------------------------------------------------------------------------
+; Function: str_len()
+; -----------------------------------------------------------------------------
+; Calculates the length of a null-terminated string.
+; Input:
+;   - A: pointer to string
+; Output:
+;   - C: length of the string (excluding null terminator)
+; -----------------------------------------------------------------------------
+str_len:
+	MOV C, 0  ; Counter
+str_len_while:
+	MOVB BL, [A]
+    CMPB BL, 0
+    JE str_len_ret
+    
+    INC C
+    INC A
+    JMP str_len_while
+str_len_ret:
+    RET
+
+
+; -----------------------------------------------------------------------------
+; Function: make_move()
+; -----------------------------------------------------------------------------
+; Handles user input and game state update after a key press.
+; - Checks if the input letter is valid and present.
+; - Reveals the letter if found, or decreases attempts otherwise.
+; - Redraws the game screen.
+; - Calls `is_game_ended()` and possibly ends the game.
+; -----------------------------------------------------------------------------
+make_move:
+	IN 6
+    CMP A, 0
+    JE make_move_return
+    CALL check_letter
+    CMP A, 0  ; Was the user input incorrect?
+    JE make_move_return
+    MOVB AL, [pressed_key]
+    CALL reveal_letter
+    MOVB BL, [is_letter_revealed]
+    CMPB BL, 0
+    JE remove_life
+    JMP make_move_return
+remove_life:
+    MOVB CL, [current_attemps]
+    DEC C
+    MOVB [current_attemps], CL
+    CALL draw_gibbet_part      ; Call the new function to draw a gibbet part if needed
+make_move_return:
+	CALL draw_word_screen
+    CALL show_word_screen
+    
+	CALL is_game_ended
+    CMP A, 0
+    JNE end_game
+	RET
+
+
+; -----------------------------------------------------------------------------
+; Function: is_game_ended()
+; -----------------------------------------------------------------------------
+; Checks if the game has ended due to success or failure.
+; Output:
+;   - A: 0 if game continues
+;        1 if player has won
+;        2 if player has lost
+; -----------------------------------------------------------------------------
+is_game_ended:
+	MOV A, 0
+    MOVB CL, [current_attemps]
+	CMPB CL, 0
+    JE is_game_ended_user_lost
+    CALL match_words
+    CMP A, 1
+    JE is_game_ended_user_win
+    JMP is_game_ended_return
+is_game_ended_user_lost:
+	MOV A, 2
+    JMP is_game_ended_return
+is_game_ended_user_win:
+	MOV A, 1
+    JMP is_game_ended_return
+is_game_ended_return:
+    RET
+
+
+; -----------------------------------------------------------------------------
+; Function: match_words()
+; -----------------------------------------------------------------------------
+; Compares guessed word with the selected word character-by-character.
+; Output:
+;   - A: 1 if words match
+;        0 otherwise
+; -----------------------------------------------------------------------------
+match_words:
+	MOV C, [selected_word_ptr]
+    MOV D, guessed_word
+    MOV A, 1
+match_words_loop:
+	MOVB BL, [C]
+   	CMPB BL, 0
+    JE match_words_return
+    MOVB BH, [D]
+    CMPB BL, BH
+    JNE match_words_set_unmatched
+    INC C
+    INC D
+    JMP match_words_loop
+match_words_set_unmatched:
+	MOV A, 0
+match_words_return:
+	RET
+
+; -----------------------------------------------------------------------------
+; Function: reveal_letter(char)
+; -----------------------------------------------------------------------------
+; Reveals all occurrences of the guessed letter in the guessed word.
+; Input:
+;   - AL: character to reveal
+; Sets `is_letter_revealed` to 1 if at least one match is found.
+; -----------------------------------------------------------------------------
+reveal_letter:
+	MOV B, [selected_word_ptr]
+    MOV C, 0
+reveal_letter_loop:
+	CMPB CL, [selected_word_length]
+    JE reveal_letter_return
+    MOV D, 0
+    MOVB DL, [B]
+	CMP D, A
+    JE reveal_letter_found
+    JMP reveal_letter_loop_finish
+reveal_letter_found:
+	MOVB [is_letter_revealed], 1 
+	MOV D, guessed_word
+    ADD D, C
+    MOVB [D], AL
+reveal_letter_loop_finish:
+	INC B
+    INC C
+    JMP reveal_letter_loop
+reveal_letter_return:
+    RET
+
+
+; -----------------------------------------------------------------------------
+; Function: end_game(status)
+; -----------------------------------------------------------------------------
+; Finalizes the game based on win/loss status.
+; Input:
+;   - A: 1 if win, anything else if loss
+; Updates the screen accordingly and stops the game loop.
+; -----------------------------------------------------------------------------
+end_game:
+	CMP A, 1
+    JE end_game_win
+    CALL draw_you_lost_screen
+    CALL draw_mystery_word_screen
+    JMP end_game_return
+end_game_win:
+	CALL draw_you_win_screen
+end_game_return:
+	CALL clear_guessed_word
+	MOVB [is_running], 0
+	RET
+
+
+; -----------------------------------------------------------------------------
+; Function: check_letter(char)
+; -----------------------------------------------------------------------------
+; Verifies whether the input letter is present in the alphabet display.
+; Input:
+;   - AL: character to check
+; Output:
+;   - A: 1 if letter was found and removed
+;        0 otherwise
+; If uppercase match is found, converts it to lowercase in `pressed_key`.
+; -----------------------------------------------------------------------------
+check_letter:
+	MOV D, display
+check_letter_loop:
+	CMP D, 0x101A               ; If all letters on the text display are checked
+    JE check_letter_return_0
+	MOVB CL, [D]  
+    CMPB CL, AL					; Is current symbol the same as input one?
+    JE check_letter_upper_to_lower
+    ADDB CL, 0x20				; The same as lower input?
+    CMPB CL, AL
+    JE check_letter_remove
+	INC D
+	JMP check_letter_loop
+check_letter_upper_to_lower:
+	ADDB CL, 0x20
+    MOVB [pressed_key], CL
+    JMP check_letter_remove
+check_letter_remove:
+	MOVB [D], 0
+    MOV A, 1
+    RET
+check_letter_return_0:
+	MOV A, 0
+    RET
+
+
+; -----------------------------------------------------------------------------
+; Function: print_letters()
+; -----------------------------------------------------------------------------
+; Fills the display buffer with uppercase letters A to Z.
+; Starts at `display` (0x1000).
+; -----------------------------------------------------------------------------
+print_letters:
+	MOV C, 0x41
+	MOV D, display
+print_letters_loop:
+	MOVB [D], CL
+    CMPB CL, 0x5A ; Z is the last
+    JE print_letters_return
+    INC D
+    INC C
+    JMP print_letters_loop
+print_letters_return:
+	RET
+
+
+; -----------------------------------------------------------------------------
+; Function: clear_guessed_word()
+; -----------------------------------------------------------------------------
+; Clears the guessed word buffer by filling it with null characters (0x00).
+; Clears [selected_word_length] bytes starting at `guessed_word`.
+; -----------------------------------------------------------------------------
+clear_guessed_word:
+	MOV D, guessed_word
+clear_guessed_word_loop:
+	MOVB CL, [D]
+	CMPB CL, 0
+    JE clear_guessed_word_return
+    MOVB [D], 0x00
+    INC D
+    JMP clear_guessed_word_loop
+clear_guessed_word_return:
+	RET
+
+
+; -----------------------------------------------------------------------------
+; Function: init_guessed_word(word_ptr)
+; -----------------------------------------------------------------------------
+; Initializes the guessed word buffer with underscores (0x5F).
+; Input:
+;   - A: pointer to selected word
+; Uses underscore placeholders for each character in the selected word.
+; -----------------------------------------------------------------------------
+init_guessed_word:
+	MOV D, guessed_word
+init_guessed_word_loop:
+	MOVB BL, [A]
+    CMPB BL, 0
+    JE init_guessed_word_ret
+    MOVB [D], 0x5F
+    INC D
+    INC A
+    JMP init_guessed_word_loop
+init_guessed_word_ret:
+	RET
+
+
+; -----------------------------------------------------------------------------
+; Function: init_game()
+; -----------------------------------------------------------------------------
+; Initializes all game state variables and visual elements for a new game.
+; - Selects a random word
+; - Calculates word length
+; - Initializes guessed word with underscores
+; - Sets attempts, draws letters and screen
+; -----------------------------------------------------------------------------
+init_game:
+    MOVB [is_running], 1
+	CALL select_random_word
+
+    MOV A, [selected_word_ptr]
+    CALL str_len
+    
+    MOVB [selected_word_length], CL
+	MOVB AL, [max_attemps]
+    MOVB [current_attemps], AL
+    
+    MOV A, [selected_word_ptr]
+    CALL init_guessed_word
+    CALL print_letters
+    
+    CALL draw_word_screen
+    CALL show_word_screen
+    
+    RET
+
+
+; -----------------------------------------------------------------------------
+; Function: main()
+; -----------------------------------------------------------------------------
+; Entry point of the program.
+; - Initializes the stack pointer.
+; - Enables text mode on the graphics card.
+; - Displays a loading screen.
+; - Loads custom VRAM tiles (hangman graphics).
+; - Initializes game state.
+; - Enables keyboard interrupts (IN 6).
+; - Jumps into the main game loop.
+; -----------------------------------------------------------------------------
+main:
+	MOV SP, 0x0FFF
+    
+    ; Enable the graphic card in TEXT mode.
+    MOV A, 1
+    OUT 7
+    
+    ; Construct and show the "Loading..." message.
+    CALL draw_loading_screen
+    CALL show_loading_screen
+    
+    ; Initialize the graphic elements.
+    CALL load_vram_tiles
+    
+    CALL init_game
+    
+    ; Enable keypress (1) interrupts only.
+    MOV A, 1
+    OUT 0
+    STI
+
+
+; -----------------------------------------------------------------------------
+; Function: game_loop()
+; -----------------------------------------------------------------------------
+; Main runtime loop of the game.
+; - Continuously processes user input.
+; - Relies on interrupts to capture keypresses.
+; - Game logic (moves, updates) is processed via `process_user_input()`.
+; -----------------------------------------------------------------------------
+game_loop:
+	CALL process_user_input
+	JMP game_loop
+
+
+ORG 0x1000
+display:
+
